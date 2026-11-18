@@ -59,46 +59,53 @@
   }
   .top { display: flex; align-items: stretch; justify-content: space-between; gap: 12px; max-width: 560px; margin: 0 auto; }
   .left { min-width: 0; display: flex; flex-direction: column; }
-  .proj { margin-top: 6px; font-variant-numeric: tabular-nums; line-height: 1.3; }
-  .proj .big { font-size: 17px; font-weight: 700; }
-  .proj .muted { font-size: 13px; color: var(--muted); }
-  .top .gear { align-self: flex-start; }
-  .panels { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-width: 560px; margin: 10px auto 0; }
-  .panel {
-    background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 8px 8px 10px;
-    display: flex; flex-direction: column; align-items: center; text-align: center; min-width: 0;
+  .top .gear { align-self: center; }
+  .icon-btn {
+    width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--line); background: var(--card); color: var(--muted);
+    display: inline-flex; align-items: center; justify-content: center; padding: 0; flex-shrink: 0;
   }
-  .p-title { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; font-weight: 600; margin-bottom: 6px; }
-  .p-title .asof { text-transform: none; letter-spacing: 0; font-weight: 400; }
-  .panel .proj { margin-top: 8px; }
-  .panel .proj .big { font-size: 15px; }
-  .panel .proj .muted { font-size: 12px; }
-  .gauge.actual .g-fill { background: var(--accent); }
-  .gauge.actual .g-pill { background: var(--accent); color: #fff; }
-  .gauge.actual .g-dot { border-color: var(--accent); }
-  .p-hint { font-size: 10px; color: var(--muted); margin-top: 3px; }
+  .total { font-size: 26px; }
+  .sub { font-size: 12px; }
 
-  /* Vertical weight gauge: start at top, goal at bottom */
-  .gauge {
-    display: grid; grid-template-columns: 50px 10px 40px; column-gap: 7px;
-    height: 104px; flex-shrink: 0; cursor: pointer; background: none; border: 0; padding: 4px 0; color: inherit; font: inherit; text-align: left;
+  /* Weight chart: two bars on one shared scale, start at top, goal at bottom */
+  .chart {
+    position: relative; max-width: 560px; margin: 14px auto 0;
+    display: grid; grid-template-columns: 46px 1fr 1fr; grid-template-rows: 210px auto; column-gap: 4px;
+    --pad: 10px;
   }
-  .g-pills, .g-ends { position: relative; }
-  .g-track { position: relative; background: var(--empty); border-radius: 999px; box-shadow: inset 0 0 0 1px var(--line); }
-  .g-fill { position: absolute; left: 0; right: 0; top: 0; border-radius: 999px; background: var(--yes); transition: height .3s ease; }
-  .g-dot {
-    position: absolute; left: 50%; width: 16px; height: 16px; border-radius: 50%;
-    background: var(--card); border: 3px solid var(--text); transform: translate(-50%, -50%); transition: top .3s ease;
+  .guide { position: absolute; left: 46px; right: 0; border-top: 1px dashed var(--line); pointer-events: none; }
+  .guide.start { top: var(--pad); }
+  .guide.goal { top: calc(210px - var(--pad)); }
+  .axis { position: relative; grid-row: 1; grid-column: 1; }
+  .ax { position: absolute; left: 0; transform: translateY(-50%); line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .ax b { display: block; font-size: 13px; }
+  .ax span { display: block; font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+  .ax.start { top: var(--pad); }
+  .ax.goal { top: calc(210px - var(--pad)); }
+  .col {
+    grid-row: 1; position: relative; display: flex; justify-content: center; align-items: stretch;
+    background: none; border: 0; padding: var(--pad) 0; margin: 0; font: inherit; color: inherit; cursor: pointer;
   }
+  .bar {
+    position: relative; width: 38px; margin-right: 46px; border-radius: 12px;
+    background: var(--empty); box-shadow: inset 0 0 0 1px var(--line); z-index: 1;
+  }
+  .g-fill { position: absolute; left: 0; right: 0; top: 0; border-radius: 12px 12px 0 0; background: var(--yes); transition: height .4s ease; }
+  .g-mark { position: absolute; left: -5px; right: -5px; height: 4px; border-radius: 2px; background: var(--text); transform: translateY(-50%); transition: top .4s ease; }
   .g-pill {
-    position: absolute; right: 0; transform: translateY(-50%); transition: top .3s ease;
-    background: var(--text); color: var(--bg); font-size: 13px; font-weight: 700; padding: 3px 7px; border-radius: 8px;
+    position: absolute; left: calc(100% + 6px); top: 50%; transform: translateY(-50%);
+    background: var(--yes); color: #fff; font-size: 14px; font-weight: 700; padding: 4px 8px; border-radius: 9px;
     font-variant-numeric: tabular-nums; white-space: nowrap;
   }
-  .g-end { position: absolute; left: 0; font-size: 12px; line-height: 1.15; font-variant-numeric: tabular-nums; white-space: nowrap; }
-  .g-end span { display: block; font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
-  .g-end.start { top: -2px; }
-  .g-end.goal { bottom: -2px; }
+  .col.actual .g-fill, .col.actual .g-pill { background: var(--accent); }
+  .col.actual.unset .g-pill { background: var(--card); color: var(--muted); box-shadow: inset 0 0 0 1px var(--line); }
+  .cap { grid-row: 2; text-align: center; padding-top: 8px; font-variant-numeric: tabular-nums; line-height: 1.3; }
+  .cap-t { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; font-weight: 600; }
+  .cap-t .dot { width: 8px; height: 8px; border-radius: 50%; vertical-align: 0; margin-right: 4px; }
+  .cap-d { font-size: 16px; font-weight: 700; margin-top: 2px; }
+  .cap-s { font-size: 12px; color: var(--muted); }
+  .cap-note { grid-row: 3; grid-column: 2 / 4; text-align: center; font-size: 11px; color: var(--muted); margin-top: 6px; }
+  @media (max-width: 360px) { .bar { margin-right: 40px; width: 32px; } }
   .total-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
   .total { font-size: 32px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1; }
   .total small { font-size: 15px; font-weight: 500; color: var(--muted); }
@@ -176,34 +183,33 @@
       <div class="total" id="totalWrap"><span id="total">0</span> <small>cal</small></div>
       <div class="sub" id="sub">0 deficit days · 0 over</div>
     </div>
-    <button class="gear" id="settingsBtn">Settings</button>
+    <button class="icon-btn" id="settingsBtn" aria-label="Settings">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
   </div>
-  <div class="panels">
-    <div class="panel">
-      <div class="p-title">Projected</div>
-      <button type="button" class="gauge" data-g aria-label="Projected weight">
-        <div class="g-pills"><div class="g-pill">181.2</div></div>
-        <div class="g-track"><div class="g-fill"></div><div class="g-dot"></div></div>
-        <div class="g-ends">
-          <div class="g-end start"><span>Start</span><b class="g-start">181.2</b></div>
-          <div class="g-end goal"><span>Goal</span><b class="g-goal">165.0</b></div>
-        </div>
-      </button>
-      <div class="proj"><div class="big" id="daysLeft">—</div><div class="muted" id="goalDate"></div></div>
+  <div class="chart">
+    <div class="guide start"></div><div class="guide goal"></div>
+    <div class="axis">
+      <div class="ax start"><b id="axStart">181.2</b><span>Start</span></div>
+      <div class="ax goal"><b id="axGoal">165.0</b><span>Goal</span></div>
     </div>
-    <div class="panel">
-      <div class="p-title">Actual <span class="asof" id="asOf"></span></div>
-      <button type="button" class="gauge actual" data-g aria-label="Actual weight">
-        <div class="g-pills"><div class="g-pill">181.2</div></div>
-        <div class="g-track"><div class="g-fill"></div><div class="g-dot"></div></div>
-        <div class="g-ends">
-          <div class="g-end start"><span>Start</span><b class="g-start">181.2</b></div>
-          <div class="g-end goal"><span>Goal</span><b class="g-goal">165.0</b></div>
-        </div>
-      </button>
-      <div class="proj"><div class="big" id="daysLeft2">—</div><div class="muted" id="goalDate2"></div></div>
-      <div class="p-hint" id="actualHint">Tap bar to enter today’s weight</div>
+    <button type="button" class="col" data-g aria-label="Projected weight">
+      <div class="bar"><div class="g-fill"></div><div class="g-mark"><span class="g-pill">181.2</span></div></div>
+    </button>
+    <button type="button" class="col actual" data-g aria-label="Actual weight">
+      <div class="bar"><div class="g-fill"></div><div class="g-mark"><span class="g-pill">181.2</span></div></div>
+    </button>
+    <div class="cap" style="grid-column:2">
+      <div class="cap-t"><i class="dot" style="background:var(--yes)"></i>Projected</div>
+      <div class="cap-d" id="daysLeft">—</div>
+      <div class="cap-s" id="goalDate"></div>
     </div>
+    <div class="cap" style="grid-column:3">
+      <div class="cap-t"><i class="dot" style="background:var(--accent)"></i>Actual<span id="asOf"></span></div>
+      <div class="cap-d" id="daysLeft2">—</div>
+      <div class="cap-s" id="goalDate2"></div>
+    </div>
+    <div class="cap-note" id="capNote">Days to goal at 500 cal/day</div>
   </div>
 </header>
 
@@ -418,12 +424,11 @@
     var span = state.start - state.goal;
     var frac = span !== 0 ? (state.start - weight) / span : 0;
     var pos = Math.max(0, Math.min(1, frac)) * 100 + '%';
-    var pill = g.querySelector('.g-pill');
-    pill.textContent = w1(weight); pill.style.top = pos;
-    g.querySelector('.g-dot').style.top = pos;
+    g.querySelector('.g-pill').textContent = w1(weight);
+    g.querySelector('.g-mark').style.top = pos;
     g.querySelector('.g-fill').style.height = pos;
-    g.querySelector('.g-start').textContent = w1(state.start);
-    g.querySelector('.g-goal').textContent = w1(state.goal);
+    document.getElementById('axStart').textContent = w1(state.start);
+    document.getElementById('axGoal').textContent = w1(state.goal);
     g.setAttribute('aria-label', label + ' ' + w1(weight) + ' lb, start ' + w1(state.start) + ', goal ' + w1(state.goal) + '. Tap to edit.');
   }
 
@@ -435,8 +440,8 @@
     if (state.def <= 0) { big.textContent = w1(lbsLeft) + ' lb to go'; sub.textContent = 'Set a default deficit'; return; }
     var days = Math.ceil(lbsLeft * 3500 / state.def);
     var d = new Date(from.getFullYear(), from.getMonth(), from.getDate() + days - 1);
-    big.textContent = fmt(days) + ' day' + (days === 1 ? '' : 's') + ' to goal';
-    sub.textContent = 'at ' + fmt(state.def) + '/day · ' + shortDate(d);
+    big.textContent = fmt(days) + ' day' + (days === 1 ? '' : 's');
+    sub.textContent = shortDate(d);
   }
 
   function updateWeight(total) {
@@ -452,6 +457,7 @@
       if (next > from) from = next;
     }
     paintEta(proj, from, 'daysLeft', 'goalDate');
+    document.getElementById('capNote').textContent = 'Days to goal at ' + fmt(state.def) + ' cal/day';
 
     // Actual: the weight you entered, counting from today.
     var actual = state.actual != null ? state.actual : state.start;
@@ -460,10 +466,15 @@
     var asOf = '';
     if (state.actual != null && state.actualDate) {
       var q = state.actualDate.split('-');
-      asOf = '· ' + SHORT[+q[1] - 1] + ' ' + (+q[2]);
+      asOf = ' · ' + SHORT[+q[1] - 1] + ' ' + (+q[2]);
     }
     document.getElementById('asOf').textContent = asOf;
-    document.getElementById('actualHint').textContent = state.actual != null ? 'Tap bar to update' : 'Tap bar to enter today’s weight';
+    gauges[1].classList.toggle('unset', state.actual == null);
+    if (state.actual == null) {
+      gauges[1].querySelector('.g-pill').textContent = 'Set';
+      document.getElementById('daysLeft2').textContent = 'Tap bar';
+      document.getElementById('goalDate2').textContent = 'to enter weight';
+    }
   }
 
   // Tap cycles: empty → deficit → over → empty. Custom amounts are reset on each change.
