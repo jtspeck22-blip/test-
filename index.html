@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Deficit">
+<meta name="theme-color" content="#f6f7f9">
+<title>Deficit Calendar</title>
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --card: #ffffff;
+    --text: #16181d;
+    --muted: #6b7280;
+    --line: #e5e7eb;
+    --empty: #eef0f3;
+    --yes: #16a34a;
+    --yes-soft: #dcfce7;
+    --no: #dc2626;
+    --no-soft: #fee2e2;
+    --accent: #2563eb;
+    --today: #111827;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1115;
+      --card: #181b21;
+      --text: #f3f4f6;
+      --muted: #9ca3af;
+      --line: #2a2f38;
+      --empty: #222630;
+      --yes: #22c55e;
+      --yes-soft: #14532d;
+      --no: #ef4444;
+      --no-soft: #7f1d1d;
+      --accent: #60a5fa;
+      --today: #f3f4f6;
+    }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-user-select: none; user-select: none;
+    -webkit-touch-callout: none;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  header {
+    position: sticky; top: 0; z-index: 5;
+    background: var(--bg);
+    padding: calc(12px + env(safe-area-inset-top)) 16px 12px;
+    border-bottom: 1px solid var(--line);
+  }
+  .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; max-width: 560px; margin: 0 auto; }
+  .total-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+  .total { font-size: 32px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1; }
+  .total small { font-size: 15px; font-weight: 500; color: var(--muted); }
+  .sub { font-size: 13px; color: var(--muted); margin-top: 2px; }
+  .gear {
+    border: 1px solid var(--line); background: var(--card); color: var(--text);
+    border-radius: 12px; padding: 10px 12px; font-size: 14px; font-weight: 600;
+  }
+  main { max-width: 560px; margin: 0 auto; padding: 8px 16px 40px; }
+  .legend { display: flex; gap: 14px; font-size: 12px; color: var(--muted); padding: 8px 0 4px; flex-wrap: wrap; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .dot { width: 12px; height: 12px; border-radius: 4px; display: inline-block; }
+  .month { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 14px 12px; margin-top: 14px; scroll-margin-top: 110px; }
+  .month h2 { margin: 0 4px 10px; font-size: 18px; display: flex; justify-content: space-between; align-items: baseline; }
+  .month h2 .mtotal { font-size: 13px; font-weight: 500; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+  .dow { font-size: 11px; color: var(--muted); text-align: center; padding-bottom: 2px; }
+  .day {
+    aspect-ratio: 1 / 1; border-radius: 10px; border: 0;
+    background: var(--empty); color: var(--text);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font: inherit; font-size: 15px; font-weight: 600; padding: 0;
+    position: relative; touch-action: manipulation;
+    transition: transform .08s ease, background-color .15s ease;
+  }
+  .day.pressing { transform: scale(.92); }
+  .day .amt { font-size: 9px; font-weight: 600; opacity: .9; margin-top: 1px; font-variant-numeric: tabular-nums; }
+  .day.yes { background: var(--yes); color: #fff; }
+  .day.no { background: var(--no); color: #fff; }
+  .day.today { box-shadow: inset 0 0 0 2px var(--today); }
+  .day.yes.today, .day.no.today { box-shadow: inset 0 0 0 2px var(--card), 0 0 0 2px var(--today); }
+  .day.custom::after {
+    content: ""; position: absolute; top: 5px; right: 5px; width: 5px; height: 5px; border-radius: 50%; background: currentColor; opacity: .8;
+  }
+  .blank { aspect-ratio: 1 / 1; }
+  .hint { font-size: 12px; color: var(--muted); text-align: center; margin-top: 18px; line-height: 1.5; }
+
+  /* Sheet */
+  .backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: none; z-index: 20; align-items: flex-end; justify-content: center; }
+  .backdrop.open { display: flex; }
+  .sheet {
+    background: var(--card); width: 100%; max-width: 560px;
+    border-radius: 20px 20px 0 0; padding: 20px 16px calc(20px + env(safe-area-inset-bottom));
+    -webkit-user-select: text; user-select: text;
+  }
+  .sheet h3 { margin: 0 0 4px; font-size: 18px; }
+  .sheet p { margin: 0 0 14px; color: var(--muted); font-size: 14px; }
+  .sheet label { font-size: 13px; color: var(--muted); display: block; margin-bottom: 6px; }
+  .sheet input[type=number] {
+    width: 100%; font-size: 22px; padding: 12px 14px; border-radius: 12px;
+    border: 1px solid var(--line); background: var(--bg); color: var(--text);
+  }
+  .chips { display: flex; gap: 8px; margin: 12px 0 4px; flex-wrap: wrap; }
+  .chip { border: 1px solid var(--line); background: var(--bg); color: var(--text); padding: 8px 12px; border-radius: 999px; font-size: 14px; }
+  .chip.on { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+  .row { display: flex; gap: 10px; margin-top: 16px; }
+  .btn { flex: 1; padding: 14px; border-radius: 12px; font-size: 16px; font-weight: 600; border: 1px solid var(--line); background: var(--bg); color: var(--text); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.danger { color: var(--no); }
+  .linkrow { display: flex; gap: 10px; margin-top: 10px; }
+  .linkrow .btn { font-size: 14px; padding: 10px; font-weight: 500; }
+</style>
+</head>
+<body>
+<header>
+  <div class="top">
+    <div>
+      <div class="total-label">Total deficit</div>
+      <div class="total"><span id="total">0</span> <small>cal</small></div>
+      <div class="sub" id="sub">0 deficit days · 0 over</div>
+    </div>
+    <button class="gear" id="settingsBtn">Default: <span id="defLabel">500</span></button>
+  </div>
+</header>
+
+<main>
+  <div class="legend">
+    <span><i class="dot" style="background:var(--yes)"></i>Deficit</span>
+    <span><i class="dot" style="background:var(--no)"></i>No deficit</span>
+    <span><i class="dot" style="background:var(--empty);border:1px solid var(--line)"></i>Not logged</span>
+  </div>
+  <div id="months"></div>
+  <p class="hint">Tap a day to cycle: deficit → no deficit → clear.<br>Press and hold a day to set a custom deficit amount.<br>Data is saved on this device.</p>
+</main>
+
+<!-- Day editor -->
+<div class="backdrop" id="dayBackdrop">
+  <div class="sheet" role="dialog" aria-modal="true">
+    <h3 id="dayTitle">Day</h3>
+    <p>Calories in deficit for this day.</p>
+    <label for="dayInput">Deficit (cal)</label>
+    <input type="number" id="dayInput" inputmode="numeric" min="0" step="10">
+    <div class="chips" id="dayChips"></div>
+    <div class="row">
+      <button class="btn" id="dayDefault">Use default</button>
+      <button class="btn primary" id="daySave">Save</button>
+    </div>
+    <div class="linkrow">
+      <button class="btn danger" id="dayNo">Mark no deficit</button>
+      <button class="btn" id="dayClear">Clear day</button>
+    </div>
+  </div>
+</div>
+
+<!-- Settings -->
+<div class="backdrop" id="setBackdrop">
+  <div class="sheet" role="dialog" aria-modal="true">
+    <h3>Default deficit</h3>
+    <p>Used whenever you tap a day without setting a custom amount. Changing it updates every day that uses the default.</p>
+    <label for="defInput">Default (cal)</label>
+    <input type="number" id="defInput" inputmode="numeric" min="0" step="10">
+    <div class="row">
+      <button class="btn" id="setCancel">Cancel</button>
+      <button class="btn primary" id="setSave">Save</button>
+    </div>
+    <div class="linkrow">
+      <button class="btn" id="exportBtn">Copy backup</button>
+      <button class="btn" id="importBtn">Restore backup</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  // Calendar range: first month shown through February 2027.
+  var START = { y: 2026, m: 10 };  // November 2026 (months are 0-based)
+  var END   = { y: 2027, m: 1 };   // February 2027
+  var KEY = 'deficitCalendar.v1';
+  var LONG_PRESS_MS = 500;
+  var MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+  var state = load();
+
+  function load() {
+    try {
+      var s = JSON.parse(localStorage.getItem(KEY));
+      if (s && typeof s === 'object' && s.days) return { def: Number(s.def) || 500, days: s.days };
+    } catch (e) {}
+    return { def: 500, days: {} };
+  }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+  }
+
+  // days[key] = { s: 'yes' | 'no', a?: number (custom amount) }
+  function key(y, m, d) { return y + '-' + String(m + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0'); }
+  function amountFor(entry) {
+    if (!entry || entry.s !== 'yes') return 0;
+    return typeof entry.a === 'number' ? entry.a : state.def;
+  }
+  function fmt(n) { return Math.round(n).toLocaleString(); }
+
+  var monthsEl = document.getElementById('months');
+  var cells = {};
+  var monthTotals = [];
+
+  function build() {
+    var today = new Date();
+    var todayKey = key(today.getFullYear(), today.getMonth(), today.getDate());
+    var y = START.y, m = START.m;
+    while (y < END.y || (y === END.y && m <= END.m)) {
+      var sec = document.createElement('section');
+      sec.className = 'month';
+      sec.id = 'm-' + y + '-' + m;
+      var h = document.createElement('h2');
+      h.innerHTML = '<span>' + MONTHS[m] + ' ' + y + '</span><span class="mtotal"></span>';
+      sec.appendChild(h);
+      monthTotals.push({ y: y, m: m, el: h.querySelector('.mtotal') });
+
+      var grid = document.createElement('div');
+      grid.className = 'grid';
+      ['S','M','T','W','T','F','S'].forEach(function (d) {
+        var e = document.createElement('div'); e.className = 'dow'; e.textContent = d; grid.appendChild(e);
+      });
+      var first = new Date(y, m, 1).getDay();
+      var count = new Date(y, m + 1, 0).getDate();
+      for (var i = 0; i < first; i++) { var b = document.createElement('div'); b.className = 'blank'; grid.appendChild(b); }
+      for (var d = 1; d <= count; d++) {
+        var k = key(y, m, d);
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'day' + (k === todayKey ? ' today' : '');
+        btn.dataset.key = k;
+        btn.dataset.label = MONTHS[m] + ' ' + d + ', ' + y;
+        btn.innerHTML = '<span>' + d + '</span><span class="amt"></span>';
+        attachPress(btn);
+        grid.appendChild(btn);
+        cells[k] = btn;
+      }
+      sec.appendChild(grid);
+      monthsEl.appendChild(sec);
+      m++; if (m > 11) { m = 0; y++; }
+    }
+  }
+
+  function paintCell(k) {
+    var btn = cells[k]; if (!btn) return;
+    var e = state.days[k];
+    btn.classList.toggle('yes', !!e && e.s === 'yes');
+    btn.classList.toggle('no', !!e && e.s === 'no');
+    btn.classList.toggle('custom', !!e && e.s === 'yes' && typeof e.a === 'number');
+    btn.querySelector('.amt').textContent = (e && e.s === 'yes') ? fmt(amountFor(e)) : '';
+    var desc = btn.dataset.label + ': ' + (!e ? 'not logged' : e.s === 'yes' ? 'deficit of ' + fmt(amountFor(e)) + ' calories' : 'no deficit');
+    btn.setAttribute('aria-label', desc);
+  }
+  function paintAll() {
+    Object.keys(cells).forEach(paintCell);
+    updateTotals();
+  }
+  function updateTotals() {
+    var total = 0, yes = 0, no = 0, per = {};
+    Object.keys(state.days).forEach(function (k) {
+      var e = state.days[k];
+      if (e.s === 'yes') { yes++; var a = amountFor(e); total += a; var mk = k.slice(0, 7); per[mk] = (per[mk] || 0) + a; }
+      else if (e.s === 'no') no++;
+    });
+    document.getElementById('total').textContent = fmt(total);
+    document.getElementById('sub').textContent =
+      yes + ' deficit day' + (yes === 1 ? '' : 's') + ' · ' + no + ' over · ≈ ' + (total / 3500).toFixed(1) + ' lb';
+    document.getElementById('defLabel').textContent = fmt(state.def);
+    monthTotals.forEach(function (mt) {
+      var mk = mt.y + '-' + String(mt.m + 1).padStart(2, '0');
+      mt.el.textContent = per[mk] ? fmt(per[mk]) + ' cal' : '';
+    });
+  }
+
+  // Tap cycles: empty → deficit → no deficit → empty. Custom amount is kept while it stays a deficit.
+  function cycle(k) {
+    var e = state.days[k];
+    if (!e) state.days[k] = { s: 'yes' };
+    else if (e.s === 'yes') state.days[k] = { s: 'no' };
+    else delete state.days[k];
+    save(); paintCell(k); updateTotals();
+    if (navigator.vibrate) navigator.vibrate(8);
+  }
+
+  function attachPress(btn) {
+    var timer = null, fired = false, sx = 0, sy = 0, active = false;
+    function start(x, y) {
+      active = true; fired = false; sx = x; sy = y;
+      btn.classList.add('pressing');
+      timer = setTimeout(function () {
+        fired = true; btn.classList.remove('pressing');
+        if (navigator.vibrate) navigator.vibrate(20);
+        openDay(btn.dataset.key);
+      }, LONG_PRESS_MS);
+    }
+    function cancel() { active = false; clearTimeout(timer); btn.classList.remove('pressing'); }
+    function end() {
+      if (!active) return;
+      var wasFired = fired; cancel();
+      if (!wasFired) cycle(btn.dataset.key);
+    }
+    btn.addEventListener('pointerdown', function (ev) {
+      if (ev.pointerType === 'mouse' && ev.button !== 0) return;
+      start(ev.clientX, ev.clientY);
+    });
+    btn.addEventListener('pointermove', function (ev) {
+      if (active && (Math.abs(ev.clientX - sx) > 10 || Math.abs(ev.clientY - sy) > 10)) cancel(); // scrolling
+    });
+    btn.addEventListener('pointerup', end);
+    btn.addEventListener('pointercancel', cancel);
+    btn.addEventListener('pointerleave', cancel);
+    btn.addEventListener('contextmenu', function (ev) { ev.preventDefault(); });
+    btn.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); cycle(btn.dataset.key); }
+      else if (ev.key === 'e' || ev.key === 'E') openDay(btn.dataset.key);
+    });
+  }
+
+  // Day editor sheet
+  var dayBackdrop = document.getElementById('dayBackdrop');
+  var dayInput = document.getElementById('dayInput');
+  var editingKey = null;
+
+  function openDay(k) {
+    editingKey = k;
+    var e = state.days[k];
+    document.getElementById('dayTitle').textContent = cells[k].dataset.label;
+    dayInput.value = (e && e.s === 'yes') ? amountFor(e) : state.def;
+    var chips = document.getElementById('dayChips');
+    chips.innerHTML = '';
+    [250, 500, 750, 1000].forEach(function (v) {
+      var c = document.createElement('button');
+      c.type = 'button'; c.className = 'chip'; c.textContent = fmt(v);
+      c.onclick = function () { dayInput.value = v; };
+      chips.appendChild(c);
+    });
+    dayBackdrop.classList.add('open');
+    setTimeout(function () { dayInput.focus(); dayInput.select(); }, 50);
+  }
+  function closeDay() { dayBackdrop.classList.remove('open'); editingKey = null; dayInput.blur(); }
+
+  document.getElementById('daySave').onclick = function () {
+    var v = Math.max(0, Math.round(Number(dayInput.value) || 0));
+    state.days[editingKey] = v === state.def ? { s: 'yes' } : { s: 'yes', a: v };
+    save(); paintCell(editingKey); updateTotals(); closeDay();
+  };
+  document.getElementById('dayDefault').onclick = function () {
+    state.days[editingKey] = { s: 'yes' };
+    save(); paintCell(editingKey); updateTotals(); closeDay();
+  };
+  document.getElementById('dayNo').onclick = function () {
+    state.days[editingKey] = { s: 'no' };
+    save(); paintCell(editingKey); updateTotals(); closeDay();
+  };
+  document.getElementById('dayClear').onclick = function () {
+    delete state.days[editingKey];
+    save(); paintCell(editingKey); updateTotals(); closeDay();
+  };
+  dayInput.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') document.getElementById('daySave').click(); });
+  dayBackdrop.addEventListener('click', function (ev) { if (ev.target === dayBackdrop) closeDay(); });
+
+  // Settings sheet
+  var setBackdrop = document.getElementById('setBackdrop');
+  var defInput = document.getElementById('defInput');
+  document.getElementById('settingsBtn').onclick = function () {
+    defInput.value = state.def; setBackdrop.classList.add('open');
+    setTimeout(function () { defInput.focus(); defInput.select(); }, 50);
+  };
+  function closeSet() { setBackdrop.classList.remove('open'); defInput.blur(); }
+  document.getElementById('setCancel').onclick = closeSet;
+  document.getElementById('setSave').onclick = function () {
+    var v = Math.max(0, Math.round(Number(defInput.value) || 0));
+    state.def = v;
+    // Days whose custom amount now equals the default become "default" days.
+    Object.keys(state.days).forEach(function (k) { var e = state.days[k]; if (e.a === v) delete e.a; });
+    save(); paintAll(); closeSet();
+  };
+  defInput.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') document.getElementById('setSave').click(); });
+  setBackdrop.addEventListener('click', function (ev) { if (ev.target === setBackdrop) closeSet(); });
+
+  // Backup / restore (data lives in this browser only)
+  document.getElementById('exportBtn').onclick = function () {
+    var text = JSON.stringify(state);
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { alert('Backup copied. Paste it somewhere safe (e.g. Notes).'); },
+        function () { prompt('Copy this backup:', text); });
+    } else { prompt('Copy this backup:', text); }
+  };
+  document.getElementById('importBtn').onclick = function () {
+    var text = prompt('Paste a backup to restore (replaces current data):');
+    if (!text) return;
+    try {
+      var s = JSON.parse(text);
+      if (!s || typeof s.days !== 'object') throw 0;
+      state = { def: Number(s.def) || 500, days: s.days };
+      save(); paintAll(); closeSet();
+    } catch (e) { alert('That backup could not be read.'); }
+  };
+
+  build();
+  paintAll();
+
+  // Scroll to the current month if it is in range.
+  var now = new Date();
+  var cur = document.getElementById('m-' + now.getFullYear() + '-' + now.getMonth());
+  if (cur && cur.previousElementSibling) cur.scrollIntoView({ block: 'start' });
+})();
+</script>
+</body>
+</html>
