@@ -107,6 +107,11 @@
     width: 100%; font-size: 22px; padding: 12px 14px; border-radius: 12px;
     border: 1px solid var(--line); background: var(--bg); color: var(--text);
   }
+  .seg { display: flex; background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 3px; margin-bottom: 14px; }
+  .seg button { flex: 1; border: 0; background: transparent; color: var(--muted); padding: 10px; border-radius: 9px; font-size: 15px; font-weight: 600; }
+  .seg button.on.yes { background: var(--yes); color: #fff; }
+  .seg button.on.no { background: var(--no); color: #fff; }
+  .total.neg { color: var(--no); }
   .chips { display: flex; gap: 8px; margin: 12px 0 4px; flex-wrap: wrap; }
   .chip { border: 1px solid var(--line); background: var(--bg); color: var(--text); padding: 8px 12px; border-radius: 999px; font-size: 14px; }
   .chip.on { border-color: var(--accent); color: var(--accent); font-weight: 600; }
@@ -122,30 +127,34 @@
 <header>
   <div class="top">
     <div>
-      <div class="total-label">Total deficit</div>
-      <div class="total"><span id="total">0</span> <small>cal</small></div>
+      <div class="total-label">Net deficit</div>
+      <div class="total" id="totalWrap"><span id="total">0</span> <small>cal</small></div>
       <div class="sub" id="sub">0 deficit days · 0 over</div>
     </div>
-    <button class="gear" id="settingsBtn">Default: <span id="defLabel">500</span></button>
+    <button class="gear" id="settingsBtn">Defaults</button>
   </div>
 </header>
 
 <main>
   <div class="legend">
     <span><i class="dot" style="background:var(--yes)"></i>Deficit</span>
-    <span><i class="dot" style="background:var(--no)"></i>No deficit</span>
+    <span><i class="dot" style="background:var(--no)"></i>Over</span>
     <span><i class="dot" style="background:var(--empty);border:1px solid var(--line)"></i>Not logged</span>
   </div>
   <div id="months"></div>
-  <p class="hint">Tap a day to cycle: deficit → no deficit → clear.<br>Press and hold a day to set a custom deficit amount.<br>Data is saved on this device.</p>
+  <p class="hint">Tap a day to cycle: deficit → over → clear.<br>Press and hold a day to set how much you were under or over.<br>Calories over are subtracted from the total.<br>Data is saved on this device.</p>
 </main>
 
 <!-- Day editor -->
 <div class="backdrop" id="dayBackdrop">
   <div class="sheet" role="dialog" aria-modal="true">
     <h3 id="dayTitle">Day</h3>
-    <p>Calories in deficit for this day.</p>
-    <label for="dayInput">Deficit (cal)</label>
+    <p id="dayHelp">Calories in deficit for this day.</p>
+    <div class="seg">
+      <button type="button" class="yes" id="segYes">Deficit</button>
+      <button type="button" class="no" id="segNo">Over</button>
+    </div>
+    <label for="dayInput" id="dayLabel">Deficit (cal)</label>
     <input type="number" id="dayInput" inputmode="numeric" min="0" step="10">
     <div class="chips" id="dayChips"></div>
     <div class="row">
@@ -153,7 +162,6 @@
       <button class="btn primary" id="daySave">Save</button>
     </div>
     <div class="linkrow">
-      <button class="btn danger" id="dayNo">Mark no deficit</button>
       <button class="btn" id="dayClear">Clear day</button>
     </div>
   </div>
@@ -162,10 +170,12 @@
 <!-- Settings -->
 <div class="backdrop" id="setBackdrop">
   <div class="sheet" role="dialog" aria-modal="true">
-    <h3>Default deficit</h3>
-    <p>Used whenever you tap a day without setting a custom amount. Changing it updates every day that uses the default.</p>
-    <label for="defInput">Default (cal)</label>
+    <h3>Defaults</h3>
+    <p>Used when you tap a day without setting a custom amount. Changing a default updates every day that uses it.</p>
+    <label for="defInput">Default deficit (cal) — green days</label>
     <input type="number" id="defInput" inputmode="numeric" min="0" step="10">
+    <label for="defOverInput" style="margin-top:12px">Default over (cal) — red days</label>
+    <input type="number" id="defOverInput" inputmode="numeric" min="0" step="10">
     <div class="row">
       <button class="btn" id="setCancel">Cancel</button>
       <button class="btn primary" id="setSave">Save</button>
@@ -188,24 +198,37 @@
 
   var state = load();
 
+  function num(v, d) { v = Number(v); return isFinite(v) && v >= 0 ? Math.round(v) : d; }
+  function normalize(s) {
+    return { def: num(s.def, 500), defOver: num(s.defOver, 0), days: s.days || {} };
+  }
   function load() {
     try {
       var s = JSON.parse(localStorage.getItem(KEY));
-      if (s && typeof s === 'object' && s.days) return { def: Number(s.def) || 500, days: s.days };
+      if (s && typeof s === 'object' && s.days) return normalize(s);
     } catch (e) {}
-    return { def: 500, days: {} };
+    return normalize({});
   }
   function save() {
     try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
   }
 
-  // days[key] = { s: 'yes' | 'no', a?: number (custom amount) }
+  // days[key] = { s: 'yes' | 'no', a?: number }
+  //   yes: a = calories under (deficit), defaults to state.def
+  //   no:  a = calories over, defaults to state.defOver
   function key(y, m, d) { return y + '-' + String(m + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0'); }
-  function amountFor(entry) {
-    if (!entry || entry.s !== 'yes') return 0;
-    return typeof entry.a === 'number' ? entry.a : state.def;
+  function defFor(s) { return s === 'yes' ? state.def : state.defOver; }
+  function rawAmount(e) {
+    if (!e) return 0;
+    return typeof e.a === 'number' ? e.a : defFor(e.s);
+  }
+  // Signed contribution to the net deficit.
+  function netFor(e) {
+    if (!e) return 0;
+    return e.s === 'yes' ? rawAmount(e) : -rawAmount(e);
   }
   function fmt(n) { return Math.round(n).toLocaleString(); }
+  function fmtSigned(n) { return (n < 0 ? '−' : '') + fmt(Math.abs(n)); }
 
   var monthsEl = document.getElementById('months');
   var cells = {};
@@ -253,11 +276,17 @@
   function paintCell(k) {
     var btn = cells[k]; if (!btn) return;
     var e = state.days[k];
+    var amt = rawAmount(e);
     btn.classList.toggle('yes', !!e && e.s === 'yes');
     btn.classList.toggle('no', !!e && e.s === 'no');
-    btn.classList.toggle('custom', !!e && e.s === 'yes' && typeof e.a === 'number');
-    btn.querySelector('.amt').textContent = (e && e.s === 'yes') ? fmt(amountFor(e)) : '';
-    var desc = btn.dataset.label + ': ' + (!e ? 'not logged' : e.s === 'yes' ? 'deficit of ' + fmt(amountFor(e)) + ' calories' : 'no deficit');
+    btn.classList.toggle('custom', !!e && typeof e.a === 'number');
+    var label = '';
+    if (e && e.s === 'yes') label = fmt(amt);
+    else if (e && e.s === 'no' && amt > 0) label = '+' + fmt(amt);
+    btn.querySelector('.amt').textContent = label;
+    var desc = btn.dataset.label + ': ' + (!e ? 'not logged'
+      : e.s === 'yes' ? 'deficit of ' + fmt(amt) + ' calories'
+      : amt > 0 ? 'over by ' + fmt(amt) + ' calories' : 'no deficit');
     btn.setAttribute('aria-label', desc);
   }
   function paintAll() {
@@ -268,20 +297,21 @@
     var total = 0, yes = 0, no = 0, per = {};
     Object.keys(state.days).forEach(function (k) {
       var e = state.days[k];
-      if (e.s === 'yes') { yes++; var a = amountFor(e); total += a; var mk = k.slice(0, 7); per[mk] = (per[mk] || 0) + a; }
-      else if (e.s === 'no') no++;
+      if (e.s === 'yes') yes++; else if (e.s === 'no') no++; else return;
+      var n = netFor(e); total += n;
+      var mk = k.slice(0, 7); per[mk] = (per[mk] || 0) + n;
     });
-    document.getElementById('total').textContent = fmt(total);
+    document.getElementById('total').textContent = fmtSigned(total);
+    document.getElementById('totalWrap').classList.toggle('neg', total < 0);
     document.getElementById('sub').textContent =
-      yes + ' deficit day' + (yes === 1 ? '' : 's') + ' · ' + no + ' over · ≈ ' + (total / 3500).toFixed(1) + ' lb';
-    document.getElementById('defLabel').textContent = fmt(state.def);
+      yes + ' deficit day' + (yes === 1 ? '' : 's') + ' · ' + no + ' over · ≈ ' + (total < 0 ? '−' : '') + Math.abs(total / 3500).toFixed(1) + ' lb';
     monthTotals.forEach(function (mt) {
       var mk = mt.y + '-' + String(mt.m + 1).padStart(2, '0');
-      mt.el.textContent = per[mk] ? fmt(per[mk]) + ' cal' : '';
+      mt.el.textContent = (mk in per) ? fmtSigned(per[mk]) + ' cal' : '';
     });
   }
 
-  // Tap cycles: empty → deficit → no deficit → empty. Custom amount is kept while it stays a deficit.
+  // Tap cycles: empty → deficit → over → empty. Custom amounts are reset on each change.
   function cycle(k) {
     var e = state.days[k];
     if (!e) state.days[k] = { s: 'yes' };
@@ -328,13 +358,29 @@
   // Day editor sheet
   var dayBackdrop = document.getElementById('dayBackdrop');
   var dayInput = document.getElementById('dayInput');
-  var editingKey = null;
+  var segYes = document.getElementById('segYes');
+  var segNo = document.getElementById('segNo');
+  var editingKey = null, editingMode = 'yes';
+
+  function setMode(mode, resetValue) {
+    editingMode = mode;
+    segYes.classList.toggle('on', mode === 'yes');
+    segNo.classList.toggle('on', mode === 'no');
+    document.getElementById('dayLabel').textContent = mode === 'yes' ? 'Deficit (cal)' : 'Over (cal)';
+    document.getElementById('dayHelp').textContent = mode === 'yes'
+      ? 'Calories under your target — added to the total.'
+      : 'Calories over your target — subtracted from the total.';
+    if (resetValue) dayInput.value = defFor(mode);
+  }
+  segYes.onclick = function () { if (editingMode !== 'yes') setMode('yes', true); };
+  segNo.onclick = function () { if (editingMode !== 'no') setMode('no', true); };
 
   function openDay(k) {
     editingKey = k;
     var e = state.days[k];
     document.getElementById('dayTitle').textContent = cells[k].dataset.label;
-    dayInput.value = (e && e.s === 'yes') ? amountFor(e) : state.def;
+    setMode(e ? e.s : 'yes', false);
+    dayInput.value = e ? rawAmount(e) : state.def;
     var chips = document.getElementById('dayChips');
     chips.innerHTML = '';
     [250, 500, 750, 1000].forEach(function (v) {
@@ -347,23 +393,20 @@
     setTimeout(function () { dayInput.focus(); dayInput.select(); }, 50);
   }
   function closeDay() { dayBackdrop.classList.remove('open'); editingKey = null; dayInput.blur(); }
+  function commit() { save(); paintCell(editingKey); updateTotals(); closeDay(); }
 
   document.getElementById('daySave').onclick = function () {
-    var v = Math.max(0, Math.round(Number(dayInput.value) || 0));
-    state.days[editingKey] = v === state.def ? { s: 'yes' } : { s: 'yes', a: v };
-    save(); paintCell(editingKey); updateTotals(); closeDay();
+    var v = num(dayInput.value, 0);
+    state.days[editingKey] = v === defFor(editingMode) ? { s: editingMode } : { s: editingMode, a: v };
+    commit();
   };
   document.getElementById('dayDefault').onclick = function () {
-    state.days[editingKey] = { s: 'yes' };
-    save(); paintCell(editingKey); updateTotals(); closeDay();
-  };
-  document.getElementById('dayNo').onclick = function () {
-    state.days[editingKey] = { s: 'no' };
-    save(); paintCell(editingKey); updateTotals(); closeDay();
+    state.days[editingKey] = { s: editingMode };
+    commit();
   };
   document.getElementById('dayClear').onclick = function () {
     delete state.days[editingKey];
-    save(); paintCell(editingKey); updateTotals(); closeDay();
+    commit();
   };
   dayInput.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') document.getElementById('daySave').click(); });
   dayBackdrop.addEventListener('click', function (ev) { if (ev.target === dayBackdrop) closeDay(); });
@@ -371,20 +414,23 @@
   // Settings sheet
   var setBackdrop = document.getElementById('setBackdrop');
   var defInput = document.getElementById('defInput');
+  var defOverInput = document.getElementById('defOverInput');
   document.getElementById('settingsBtn').onclick = function () {
-    defInput.value = state.def; setBackdrop.classList.add('open');
-    setTimeout(function () { defInput.focus(); defInput.select(); }, 50);
+    defInput.value = state.def; defOverInput.value = state.defOver;
+    setBackdrop.classList.add('open');
   };
-  function closeSet() { setBackdrop.classList.remove('open'); defInput.blur(); }
+  function closeSet() { setBackdrop.classList.remove('open'); defInput.blur(); defOverInput.blur(); }
   document.getElementById('setCancel').onclick = closeSet;
   document.getElementById('setSave').onclick = function () {
-    var v = Math.max(0, Math.round(Number(defInput.value) || 0));
-    state.def = v;
+    state.def = num(defInput.value, state.def);
+    state.defOver = num(defOverInput.value, state.defOver);
     // Days whose custom amount now equals the default become "default" days.
-    Object.keys(state.days).forEach(function (k) { var e = state.days[k]; if (e.a === v) delete e.a; });
+    Object.keys(state.days).forEach(function (k) { var e = state.days[k]; if (e.a === defFor(e.s)) delete e.a; });
     save(); paintAll(); closeSet();
   };
-  defInput.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') document.getElementById('setSave').click(); });
+  [defInput, defOverInput].forEach(function (inp) {
+    inp.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') document.getElementById('setSave').click(); });
+  });
   setBackdrop.addEventListener('click', function (ev) { if (ev.target === setBackdrop) closeSet(); });
 
   // Backup / restore (data lives in this browser only)
@@ -401,7 +447,7 @@
     try {
       var s = JSON.parse(text);
       if (!s || typeof s.days !== 'object') throw 0;
-      state = { def: Number(s.def) || 500, days: s.days };
+      state = normalize(s);
       save(); paintAll(); closeSet();
     } catch (e) { alert('That backup could not be read.'); }
   };
