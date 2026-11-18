@@ -60,9 +60,9 @@
   }
   .top { display: flex; align-items: stretch; justify-content: space-between; gap: 12px; max-width: 560px; margin: 0 auto; }
   .left { min-width: 0; display: flex; flex-direction: column; }
-  .proj { font-size: 14px; margin-top: 6px; font-variant-numeric: tabular-nums; }
-  .proj b { font-size: 17px; }
-  .proj .muted { color: var(--muted); }
+  .proj { margin-top: 6px; font-variant-numeric: tabular-nums; line-height: 1.3; }
+  .proj .big { font-size: 17px; font-weight: 700; }
+  .proj .muted { font-size: 13px; color: var(--muted); }
   .left .gear { align-self: flex-start; margin-top: 10px; padding: 7px 12px; font-size: 13px; }
 
   /* Vertical weight gauge: start at top, goal at bottom */
@@ -162,7 +162,7 @@
       <div class="total-label">Net deficit</div>
       <div class="total" id="totalWrap"><span id="total">0</span> <small>cal</small></div>
       <div class="sub" id="sub">0 deficit days · 0 over</div>
-      <div class="proj">Projected <b id="projW">181.2</b> lb <span class="muted" id="toGoal"></span></div>
+      <div class="proj"><div class="big" id="daysLeft">—</div><div class="muted" id="goalDate"></div></div>
       <button class="gear" id="settingsBtn">Settings</button>
     </div>
     <button type="button" class="gauge" id="gauge" aria-label="Projected weight">
@@ -369,9 +369,7 @@
     var span = state.start - state.goal;
     var frac = span !== 0 ? (state.start - proj) / span : 0;
     var pos = Math.max(0, Math.min(1, frac)) * 100;
-    document.getElementById('projW').textContent = w1(proj);
-    var left = (proj - state.goal) * (span >= 0 ? 1 : -1);
-    document.getElementById('toGoal').textContent = left > 0.05 ? '· ' + w1(left) + ' to goal' : '· goal reached!';
+    updateGoalEta(proj, span);
     document.getElementById('gPill').textContent = w1(proj);
     document.getElementById('gPill').style.top = pos + '%';
     document.getElementById('gDot').style.top = pos + '%';
@@ -380,6 +378,27 @@
     document.getElementById('gGoal').textContent = w1(state.goal);
     document.getElementById('gauge').setAttribute('aria-label',
       'Projected weight ' + w1(proj) + ' lb, start ' + w1(state.start) + ', goal ' + w1(state.goal) + '. Tap to edit.');
+  }
+
+  // Days left at the default deficit, counted from today or the day after
+  // the last logged day, whichever is later.
+  var SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  function updateGoalEta(proj, span) {
+    var big = document.getElementById('daysLeft'), sub = document.getElementById('goalDate');
+    var lbsLeft = (proj - state.goal) * (span >= 0 ? 1 : -1);
+    if (lbsLeft <= 0.05) { big.textContent = 'Goal reached!'; sub.textContent = 'Projected ' + w1(proj) + ' lb'; return; }
+    if (state.def <= 0) { big.textContent = w1(lbsLeft) + ' lb to goal'; sub.textContent = 'Set a default deficit to see a date'; return; }
+    var days = Math.ceil(lbsLeft * 3500 / state.def);
+    var t = new Date(); t = new Date(t.getFullYear(), t.getMonth(), t.getDate());
+    var keys = Object.keys(state.days).sort();
+    if (keys.length) {
+      var p = keys[keys.length - 1].split('-');
+      var next = new Date(+p[0], +p[1] - 1, +p[2] + 1);
+      if (next > t) t = next;
+    }
+    var d = new Date(t.getFullYear(), t.getMonth(), t.getDate() + days - 1);
+    big.textContent = fmt(days) + ' day' + (days === 1 ? '' : 's') + ' to goal';
+    sub.textContent = 'at ' + fmt(state.def) + '/day · ' + SHORT[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear();
   }
 
   // Tap cycles: empty → deficit → over → empty. Custom amounts are reset on each change.
