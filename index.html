@@ -138,6 +138,22 @@
   .day.even { background: var(--even); color: var(--even-text); }
   .day.today { box-shadow: inset 0 0 0 2px var(--today); }
   .day.yes.today, .day.no.today, .day.even.today { box-shadow: inset 0 0 0 2px var(--card), 0 0 0 2px var(--today); }
+  .day .star {
+    position: absolute; top: 2px; left: 4px; font-size: 12px; line-height: 1; color: #facc15;
+    text-shadow: 0 0 1px rgba(0,0,0,.55), 0 0 1px rgba(0,0,0,.55); display: none;
+  }
+  .day.workout .star { display: block; }
+  .day.even .star { color: #fff; }
+  .wo-toggle {
+    width: 100%; display: flex; align-items: center; gap: 10px; padding: 12px 14px; margin-bottom: 14px;
+    border-radius: 12px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font-size: 16px; font-weight: 600; text-align: left;
+  }
+  .wo-toggle .box {
+    width: 24px; height: 24px; border-radius: 7px; border: 2px solid var(--line); display: inline-flex; align-items: center; justify-content: center;
+    font-size: 15px; color: transparent;
+  }
+  .wo-toggle.on { border-color: #eab308; }
+  .wo-toggle.on .box { background: #facc15; border-color: #eab308; color: #1f1300; }
   .day.custom::after {
     content: ""; position: absolute; top: 5px; right: 5px; width: 5px; height: 5px; border-radius: 50%; background: currentColor; opacity: .8;
   }
@@ -218,10 +234,11 @@
     <span><i class="dot" style="background:var(--yes)"></i>Deficit</span>
     <span><i class="dot" style="background:var(--no)"></i>Over</span>
     <span><i class="dot" style="background:var(--even)"></i>Even (0 over)</span>
+    <span><span style="color:#facc15;text-shadow:0 0 1px rgba(0,0,0,.55)">★</span>Worked out</span>
     <span><i class="dot" style="background:var(--empty);border:1px solid var(--line)"></i>Not logged</span>
   </div>
   <div id="months"></div>
-  <p class="hint">Tap a day to cycle: deficit → over → clear.<br>Press and hold a day to set how much you were under or over.<br>Calories over are subtracted from the total.<br>A day marked over by 0 shows as even (yellow).<br>Data is saved on this device.</p>
+  <p class="hint">Tap a day to cycle: deficit → over → clear.<br>Press and hold a day to set how much you were under or over.<br>Calories over are subtracted from the total.<br>A day marked over by 0 shows as even (yellow).<br>Hold a day and check “Worked out” to add a ★.<br>Data is saved on this device.</p>
 </main>
 
 <!-- Day editor -->
@@ -229,6 +246,7 @@
   <div class="sheet" role="dialog" aria-modal="true">
     <h3 id="dayTitle">Day</h3>
     <p id="dayHelp">Calories in deficit for this day.</p>
+    <button type="button" class="wo-toggle" id="woToggle" aria-pressed="false"><span class="box">★</span>Worked out</button>
     <div class="seg">
       <button type="button" class="yes" id="segYes">Deficit</button>
       <button type="button" class="no" id="segNo">Over</button>
@@ -241,7 +259,7 @@
       <button class="btn primary" id="daySave">Save</button>
     </div>
     <div class="linkrow">
-      <button class="btn" id="dayClear">Clear day</button>
+      <button class="btn" id="dayClear">Clear calories</button>
     </div>
   </div>
 </div>
@@ -288,9 +306,9 @@
 
 <script>
 (function () {
-  // Calendar range: first month shown through February 2027.
+  // Calendar range: first month shown through March 2027.
   var START = { y: 2026, m: 10 };  // November 2026 (months are 0-based)
-  var END   = { y: 2027, m: 1 };   // February 2027
+  var END   = { y: 2027, m: 2 };   // March 2027
   var KEY = 'deficitCalendar.v1';
   var LONG_PRESS_MS = 500;
   var MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -362,7 +380,7 @@
         btn.className = 'day' + (k === todayKey ? ' today' : '');
         btn.dataset.key = k;
         btn.dataset.label = MONTHS[m] + ' ' + d + ', ' + y;
-        btn.innerHTML = '<span>' + d + '</span><span class="amt"></span>';
+        btn.innerHTML = '<span class="star" aria-hidden="true">★</span><span>' + d + '</span><span class="amt"></span>';
         attachPress(btn);
         grid.appendChild(btn);
         cells[k] = btn;
@@ -375,8 +393,10 @@
 
   function paintCell(k) {
     var btn = cells[k]; if (!btn) return;
-    var e = state.days[k];
+    var full = state.days[k];
+    var e = full && full.s ? full : null;
     var amt = rawAmount(e);
+    btn.classList.toggle('workout', !!(full && full.w));
     btn.classList.toggle('yes', !!e && e.s === 'yes');
     btn.classList.toggle('no', !!e && e.s === 'no' && amt > 0);
     btn.classList.toggle('even', !!e && e.s === 'no' && amt === 0);
@@ -387,7 +407,8 @@
     btn.querySelector('.amt').textContent = label;
     var desc = btn.dataset.label + ': ' + (!e ? 'not logged'
       : e.s === 'yes' ? 'deficit of ' + fmt(amt) + ' calories'
-      : amt > 0 ? 'over by ' + fmt(amt) + ' calories' : 'even, no deficit and 0 over');
+      : amt > 0 ? 'over by ' + fmt(amt) + ' calories' : 'even, no deficit and 0 over')
+      + (full && full.w ? ', worked out' : '');
     btn.setAttribute('aria-label', desc);
   }
   function paintAll() {
@@ -395,9 +416,10 @@
     updateTotals();
   }
   function updateTotals() {
-    var total = 0, yes = 0, no = 0, per = {};
+    var total = 0, yes = 0, no = 0, wo = 0, per = {};
     Object.keys(state.days).forEach(function (k) {
       var e = state.days[k];
+      if (e.w) wo++;
       if (e.s === 'yes') yes++; else if (e.s === 'no') no++; else return;
       var n = netFor(e); total += n;
       var mk = k.slice(0, 7); per[mk] = (per[mk] || 0) + n;
@@ -405,7 +427,7 @@
     document.getElementById('total').textContent = fmtSigned(total);
     document.getElementById('totalWrap').classList.toggle('neg', total < 0);
     document.getElementById('sub').textContent =
-      yes + ' deficit day' + (yes === 1 ? '' : 's') + ' · ' + no + ' over · ≈ ' + (total < 0 ? '−' : '') + Math.abs(total / 3500).toFixed(1) + ' lb';
+      yes + ' deficit day' + (yes === 1 ? '' : 's') + ' · ' + no + ' over · ≈ ' + (total < 0 ? '−' : '') + Math.abs(total / 3500).toFixed(1) + ' lb' + (wo ? ' · ' + wo + ' ★' : '');
     updateWeight(total);
     monthTotals.forEach(function (mt) {
       var mk = mt.y + '-' + String(mt.m + 1).padStart(2, '0');
@@ -450,7 +472,7 @@
     var proj = state.start - total / 3500;
     paintGauge(gauges[0], proj, 'Projected weight');
     var from = todayDate();
-    var keys = Object.keys(state.days).sort();
+    var keys = Object.keys(state.days).filter(function (k) { return state.days[k].s; }).sort();
     if (keys.length) {
       var p = keys[keys.length - 1].split('-');
       var next = new Date(+p[0], +p[1] - 1, +p[2] + 1);
@@ -478,11 +500,18 @@
   }
 
   // Tap cycles: empty → deficit → over → empty. Custom amounts are reset on each change.
+  // Set a day's status/amount while keeping its workout star.
+  function setDay(k, st, a) {
+    var w = state.days[k] && state.days[k].w;
+    var e = {};
+    if (st) e.s = st;
+    if (st && typeof a === 'number') e.a = a;
+    if (w) e.w = true;
+    if (e.s || e.w) state.days[k] = e; else delete state.days[k];
+  }
   function cycle(k) {
-    var e = state.days[k];
-    if (!e) state.days[k] = { s: 'yes' };
-    else if (e.s === 'yes') state.days[k] = { s: 'no' };
-    else delete state.days[k];
+    var e = state.days[k], st = e && e.s;
+    setDay(k, !st ? 'yes' : st === 'yes' ? 'no' : null);
     save(); paintCell(k); updateTotals();
     if (navigator.vibrate) navigator.vibrate(8);
   }
@@ -545,8 +574,9 @@
     editingKey = k;
     var e = state.days[k];
     document.getElementById('dayTitle').textContent = cells[k].dataset.label;
-    setMode(e ? e.s : 'yes', false);
-    dayInput.value = e ? rawAmount(e) : state.def;
+    setMode(e && e.s ? e.s : 'yes', false);
+    dayInput.value = e && e.s ? rawAmount(e) : state.def;
+    paintWo();
     var chips = document.getElementById('dayChips');
     chips.innerHTML = '';
     [250, 500, 750, 1000].forEach(function (v) {
@@ -556,22 +586,36 @@
       chips.appendChild(c);
     });
     dayBackdrop.classList.add('open');
-    setTimeout(function () { dayInput.focus(); dayInput.select(); }, 50);
   }
   function closeDay() { dayBackdrop.classList.remove('open'); editingKey = null; dayInput.blur(); }
   function commit() { save(); paintCell(editingKey); updateTotals(); closeDay(); }
 
+  // Workout star: saves immediately, independent of deficit status.
+  var woToggle = document.getElementById('woToggle');
+  function paintWo() {
+    var on = !!(state.days[editingKey] && state.days[editingKey].w);
+    woToggle.classList.toggle('on', on);
+    woToggle.setAttribute('aria-pressed', on ? 'true' : 'false');
+  }
+  woToggle.onclick = function () {
+    var k = editingKey, e = state.days[k] || {};
+    if (e.w) delete e.w; else e.w = true;
+    if (e.s || e.w) state.days[k] = e; else delete state.days[k];
+    save(); paintCell(k); updateTotals(); paintWo();
+    if (navigator.vibrate) navigator.vibrate(10);
+  };
+
   document.getElementById('daySave').onclick = function () {
     var v = num(dayInput.value, 0);
-    state.days[editingKey] = v === defFor(editingMode) ? { s: editingMode } : { s: editingMode, a: v };
+    setDay(editingKey, editingMode, v === defFor(editingMode) ? undefined : v);
     commit();
   };
   document.getElementById('dayDefault').onclick = function () {
-    state.days[editingKey] = { s: editingMode };
+    setDay(editingKey, editingMode);
     commit();
   };
   document.getElementById('dayClear').onclick = function () {
-    delete state.days[editingKey];
+    setDay(editingKey, null);
     commit();
   };
   dayInput.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') document.getElementById('daySave').click(); });
@@ -619,7 +663,7 @@
     state.start = wt(startInput.value, state.start);
     state.goal = wt(goalInput.value, state.goal);
     // Days whose custom amount now equals the default become "default" days.
-    Object.keys(state.days).forEach(function (k) { var e = state.days[k]; if (e.a === defFor(e.s)) delete e.a; });
+    Object.keys(state.days).forEach(function (k) { var e = state.days[k]; if (e.s && e.a === defFor(e.s)) delete e.a; });
     save(); paintAll(); closeSet();
   };
   [defInput, defOverInput, startInput, goalInput].forEach(function (inp) {
