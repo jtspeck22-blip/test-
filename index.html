@@ -399,7 +399,7 @@
     return out;
   }
   function normalize(s) {
-    return { def: num(s.def, 500), defOver: num(s.defOver, 0), start: wt(s.start, 181.2), goal: wt(s.goal, 165), weights: cleanWeights(s), days: s.days || {} };
+    return { def: num(s.def, 500), defOver: num(s.defOver, 0), start: wt(s.start, 181.2), goal: wt(s.goal, 165), weights: cleanWeights(s), seeded: s.seeded || {}, days: s.days || {} };
   }
   function load() {
     try {
@@ -407,6 +407,22 @@
       if (s && typeof s === 'object' && s.days) return normalize(s);
     } catch (e) {}
     return normalize({});
+  }
+  // One-time imports of back-dated weights. Each batch runs once per device and never
+  // overwrites a day that already has a weight, so deleted entries stay deleted.
+  var SEEDS = {
+    'nov2026-backfill': { '2026-11-12': 181.2, '2026-11-13': 180.8, '2026-11-14': 180.6,
+                          '2026-11-16': 180.6, '2026-11-17': 179.6, '2026-11-18': 179.0 }
+  };
+  function applySeeds() {
+    var changed = false;
+    Object.keys(SEEDS).forEach(function (id) {
+      if (state.seeded[id]) return;
+      var batch = SEEDS[id];
+      Object.keys(batch).forEach(function (k) { if (!(k in state.weights)) state.weights[k] = batch[k]; });
+      state.seeded[id] = true; changed = true;
+    });
+    if (changed) save();
   }
   function save() {
     try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
@@ -915,6 +931,7 @@
   setInterval(function () { if (!document.getElementById('tabWeight').hidden) renderEntry(false); }, 30000);
   document.addEventListener('visibilitychange', function () { if (!document.hidden) { if (!document.getElementById('tabWeight').hidden) renderEntry(false); updateTotals(); } });
 
+  applySeeds();
   build();
   paintAll();
   try { if (localStorage.getItem(TAB_KEY) === 'weight') showTab('weight'); } catch (e) {}
