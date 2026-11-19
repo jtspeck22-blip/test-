@@ -76,6 +76,13 @@
   .guide { position: absolute; left: 46px; right: 0; border-top: 1px dashed var(--line); pointer-events: none; }
   .guide.start { top: var(--pad); }
   .guide.goal { top: calc(210px - var(--pad)); }
+  /* 25/50/75% progress ticks across each bar */
+  .tick { position: absolute; left: -4px; right: -4px; height: 0; border-top: 2px dotted var(--text); opacity: .45; z-index: 1; pointer-events: none; }
+  .tick.q1 { top: 25%; } .tick.q2 { top: 50%; } .tick.q3 { top: 75%; }
+  .ax.pct { font-size: 10px; color: var(--muted); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .ax.q1 { top: calc(var(--pad) + (210px - 2 * var(--pad)) * .25); }
+  .ax.q2 { top: calc(var(--pad) + (210px - 2 * var(--pad)) * .50); }
+  .ax.q3 { top: calc(var(--pad) + (210px - 2 * var(--pad)) * .75); }
   .axis { position: relative; grid-row: 1; grid-column: 1; }
   .ax { position: absolute; left: 0; transform: translateY(-50%); line-height: 1.1; font-variant-numeric: tabular-nums; }
   .ax b { display: block; font-size: 13px; }
@@ -91,7 +98,7 @@
     background: var(--empty); box-shadow: inset 0 0 0 1px var(--line); z-index: 1;
   }
   .g-fill { position: absolute; left: 0; right: 0; top: 0; border-radius: 12px 12px 0 0; background: var(--yes); transition: height .4s ease; }
-  .g-mark { position: absolute; left: -5px; right: -5px; height: 4px; border-radius: 2px; background: var(--text); transform: translateY(-50%); transition: top .4s ease; }
+  .g-mark { z-index: 2; position: absolute; left: -5px; right: -5px; height: 4px; border-radius: 2px; background: var(--text); transform: translateY(-50%); transition: top .4s ease; }
   .g-pill {
     position: absolute; left: calc(100% + 6px); top: 50%; transform: translateY(-50%);
     background: var(--yes); color: #fff; font-size: 14px; font-weight: 700; padding: 4px 8px; border-radius: 9px;
@@ -207,13 +214,14 @@
     <div class="guide start"></div><div class="guide goal"></div>
     <div class="axis">
       <div class="ax start"><b id="axStart">181.2</b><span>Start</span></div>
+      <div class="ax pct q1">25%</div><div class="ax pct q2">50%</div><div class="ax pct q3">75%</div>
       <div class="ax goal"><b id="axGoal">165.0</b><span>Goal</span></div>
     </div>
     <button type="button" class="col" data-g aria-label="Projected weight">
-      <div class="bar"><div class="g-fill"></div><div class="g-mark"><span class="g-pill">181.2</span></div></div>
+      <div class="bar"><div class="g-fill"></div><i class="tick q1"></i><i class="tick q2"></i><i class="tick q3"></i><div class="g-mark"><span class="g-pill">181.2</span></div></div>
     </button>
     <button type="button" class="col actual" data-g aria-label="Actual weight">
-      <div class="bar"><div class="g-fill"></div><div class="g-mark"><span class="g-pill">181.2</span></div></div>
+      <div class="bar"><div class="g-fill"></div><i class="tick q1"></i><i class="tick q2"></i><i class="tick q3"></i><div class="g-mark"><span class="g-pill">181.2</span></div></div>
     </button>
     <div class="cap" style="grid-column:2">
       <div class="cap-t"><i class="dot" style="background:var(--yes)"></i>Projected</div>
