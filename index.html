@@ -18,6 +18,7 @@
     --line: #e5e7eb;
     --empty: #eef0f3;
     --yes: #16a34a;
+    --yes-day: #15803d;
     --yes-soft: #dcfce7;
     --no: #dc2626;
     --no-soft: #fee2e2;
@@ -35,6 +36,7 @@
       --line: #2a2f38;
       --empty: #222630;
       --yes: #22c55e;
+      --yes-day: #166534;
       --yes-soft: #14532d;
       --no: #ef4444;
       --no-soft: #7f1d1d;
@@ -161,7 +163,7 @@
   }
   .day.pressing { transform: scale(.92); }
   .day .amt { font-size: 9px; font-weight: 600; opacity: .9; margin-top: 1px; font-variant-numeric: tabular-nums; }
-  .day.yes { background: var(--yes); color: #fff; }
+  .day.yes { background: var(--yes-day); color: #fff; }
   .day.no { background: var(--no); color: #fff; }
   .day.even { background: var(--even); color: var(--even-text); }
   .day.today { box-shadow: inset 0 0 0 2px var(--today); }
@@ -278,7 +280,7 @@
     </div>
   </div>
   <div class="stats">
-    <div class="stat"><b id="stYes">0</b><span><i class="sd" style="background:var(--yes)"></i>Deficit</span></div>
+    <div class="stat"><b id="stYes">0</b><span><i class="sd" style="background:var(--yes-day)"></i>Deficit</span></div>
     <div class="stat"><b id="stOver">0</b><span><i class="sd" style="background:var(--no)"></i>Over</span></div>
     <div class="stat"><b id="stWo">0</b><span><i class="ss">★</i>Workouts</span></div>
   </div>
@@ -310,7 +312,7 @@
 
 <main>
   <div class="legend">
-    <span><i class="dot" style="background:var(--yes)"></i>Deficit</span>
+    <span><i class="dot" style="background:var(--yes-day)"></i>Deficit</span>
     <span><i class="dot" style="background:var(--no)"></i>Over</span>
     <span><i class="dot" style="background:var(--even)"></i>Even</span>
     <span><span style="color:#facc15;text-shadow:0 0 1px rgba(0,0,0,.55)">★</span>Worked out</span>
