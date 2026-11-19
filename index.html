@@ -247,6 +247,8 @@
   /* Sheet */
   .backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: none; z-index: 20; align-items: flex-end; justify-content: center; }
   .backdrop.open { display: flex; }
+  /* While the finger that opened the sheet is still down, the sheet ignores touches. */
+  .backdrop.guard .sheet { pointer-events: none; }
   .sheet {
     background: var(--card); width: 100%; max-width: 560px;
     border-radius: 20px 20px 0 0; padding: 20px 16px calc(20px + env(safe-area-inset-bottom));
@@ -667,7 +669,7 @@
       timer = setTimeout(function () {
         fired = true; btn.classList.remove('pressing');
         if (navigator.vibrate) navigator.vibrate(20);
-        openDay(btn.dataset.key);
+        openDay(btn.dataset.key, true);
       }, LONG_PRESS_MS);
     }
     function cancel() { active = false; clearTimeout(timer); btn.classList.remove('pressing'); }
@@ -713,7 +715,23 @@
   segYes.onclick = function () { if (editingMode !== 'yes') setMode('yes', true); };
   segNo.onclick = function () { if (editingMode !== 'no') setMode('no', true); };
 
-  function openDay(k) {
+  // After a long-press opens the sheet, ignore input until the finger lifts
+  // (plus a short buffer for the browser's follow-up click), so the release
+  // can't close the sheet or press whatever ended up under the finger.
+  function guardUntilRelease(backdrop) {
+    backdrop.classList.add('guard');
+    var done = false;
+    var evs = ['pointerup', 'pointercancel', 'touchend', 'touchcancel', 'mouseup'];
+    function release() {
+      if (done) return; done = true;
+      evs.forEach(function (n) { document.removeEventListener(n, release, true); });
+      setTimeout(function () { backdrop.classList.remove('guard'); }, 450);
+    }
+    evs.forEach(function (n) { document.addEventListener(n, release, true); });
+    setTimeout(release, 5000);
+  }
+
+  function openDay(k, fromHold) {
     editingKey = k;
     var e = state.days[k];
     document.getElementById('dayTitle').textContent = cells[k].dataset.label;
@@ -729,6 +747,7 @@
       chips.appendChild(c);
     });
     dayBackdrop.classList.add('open');
+    if (fromHold) guardUntilRelease(dayBackdrop);
   }
   function closeDay() { dayBackdrop.classList.remove('open'); editingKey = null; dayInput.blur(); }
   function commit() { save(); paintCell(editingKey); updateTotals(); closeDay(); }
@@ -762,7 +781,7 @@
     commit();
   };
   dayInput.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') document.getElementById('daySave').click(); });
-  dayBackdrop.addEventListener('click', function (ev) { if (ev.target === dayBackdrop) closeDay(); });
+  dayBackdrop.addEventListener('click', function (ev) { if (ev.target === dayBackdrop && !dayBackdrop.classList.contains('guard')) closeDay(); });
 
   // Settings sheet
   var setBackdrop = document.getElementById('setBackdrop');
