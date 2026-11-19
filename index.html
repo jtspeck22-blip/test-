@@ -356,7 +356,6 @@
       <div class="cap-d" id="daysLeft2">—</div>
       <div class="cap-s" id="goalDate2"></div>
     </div>
-    <div class="cap-note" id="capNote">Days to goal at 500 cal/day</div>
   </div>
 </header>
 
@@ -674,7 +673,6 @@
       if (next > from) from = next;
     }
     paintEta(proj, from, 'daysLeft', 'goalDate');
-    document.getElementById('capNote').textContent = 'Days to goal at ' + fmt(state.def) + ' cal/day';
 
     // Actual: the most recent weight logged on the Weight tab, counting from today.
     var last = latestWeight();
