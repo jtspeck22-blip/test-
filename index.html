@@ -200,6 +200,7 @@
   .day.workout .star { display: block; }
   .day .bday.mk-tree { color: var(--yes); }
   .day .bday.mk-heart { color: var(--no); }
+  .day .bday.mk-turkey { color: var(--no); }
   .day .bday { position: absolute; top: -1px; left: 0; width: 15px; height: 15px; color: var(--star); pointer-events: none; }
   .day.custom::after { content: ""; position: absolute; bottom: 5px; width: 3px; height: 3px; border-radius: 50%; background: currentColor; opacity: .7; }
   .day.custom .amt { margin-bottom: 3px; }
@@ -492,6 +493,10 @@
     '12-31': { label: 'New Year’s Eve', svg: icon('<path d="M8.5 3h7l-.6 6.2a2.9 2.9 0 0 1-5.8 0z"/><path d="M12 12.1V20"/><path d="M8.5 20.5h7"/><path d="M9.2 6.5h5.6"/><circle cx="18.5" cy="3.5" r=".6" fill="currentColor"/><circle cx="20" cy="6.5" r=".6" fill="currentColor"/>', 'mk-bubbly') },
     '02-14': { label: 'Valentine’s Day', svg: icon('<path d="M12 20s-7.5-4.6-7.5-10A4 4 0 0 1 12 7.6 4 4 0 0 1 19.5 10c0 5.4-7.5 10-7.5 10z" fill="currentColor" fill-opacity=".25"/>', 'mk-heart') }
   };
+  // Thanksgiving: the fourth Thursday of November, so it's worked out per year.
+  var TURKEY = { label: 'Thanksgiving', svg: icon('<g fill="currentColor" fill-opacity=".38" stroke="none"><circle cx="3.2" cy="13.5" r="2.7"/><circle cx="4.3" cy="9.9" r="2.7"/><circle cx="7.3" cy="7.6" r="2.7"/><circle cx="11.1" cy="7.4" r="2.7"/><circle cx="14.3" cy="9.5" r="2.7"/></g><g fill="currentColor" stroke="none"><ellipse cx="12" cy="15.2" rx="5.6" ry="4.4"/><circle cx="17.6" cy="8.6" r="2"/><path d="M19.4 8.2l2 .9-2 .7z"/><circle cx="19" cy="11" r=".95"/></g><path d="M15.2 12.6l1.9-2.6" stroke-width="2.6"/><path d="M10.6 19.4l-.4 2.6M13.6 19.4l.4 2.6" stroke-width="1.6"/>', 'mk-turkey') };
+  function isThanksgiving(y, m, d) { return m === 10 && d >= 22 && d <= 28 && new Date(y, m, d).getDay() === 4; }
+
   // Holidays / days off: shaded like weekends.
   var DAYS_OFF = ['2026-11-26', '2026-11-27', '2026-12-24', '2026-12-25', '2026-12-28', '2026-12-29',
                   '2027-01-01', '2027-01-18', '2027-02-15'];
@@ -590,7 +595,7 @@
         btn.dataset.key = k;
         btn.dataset.label = MONTHS[m] + ' ' + d + ', ' + y;
         btn.innerHTML = '<span class="star" aria-hidden="true">✦</span><span>' + d + '</span><span class="amt"></span>';
-        var mk = MARKS[k.slice(5)];
+        var mk = isThanksgiving(y, m, d) ? TURKEY : MARKS[k.slice(5)];
         if (mk) { btn.insertAdjacentHTML('afterbegin', mk.svg); btn.dataset.mark = mk.label; }
         attachPress(btn);
         grid.appendChild(btn);
