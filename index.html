@@ -492,6 +492,9 @@
     '12-31': { label: 'New Year’s Eve', svg: icon('<path d="M8.5 3h7l-.6 6.2a2.9 2.9 0 0 1-5.8 0z"/><path d="M12 12.1V20"/><path d="M8.5 20.5h7"/><path d="M9.2 6.5h5.6"/><circle cx="18.5" cy="3.5" r=".6" fill="currentColor"/><circle cx="20" cy="6.5" r=".6" fill="currentColor"/>', 'mk-bubbly') },
     '02-14': { label: 'Valentine’s Day', svg: icon('<path d="M12 20s-7.5-4.6-7.5-10A4 4 0 0 1 12 7.6 4 4 0 0 1 19.5 10c0 5.4-7.5 10-7.5 10z" fill="currentColor" fill-opacity=".25"/>', 'mk-heart') }
   };
+  // Holidays / days off: shaded like weekends.
+  var DAYS_OFF = ['2026-11-26', '2026-11-27', '2026-12-24', '2026-12-25', '2026-12-28', '2026-12-29',
+                  '2027-01-01', '2027-01-18', '2027-02-15'];
   var MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
   var state = load();
@@ -583,7 +586,7 @@
         var btn = document.createElement('button');
         btn.type = 'button';
         var dw = (first + d - 1) % 7;
-        btn.className = 'day' + (k === todayKey ? ' today' : k > todayKey ? ' future' : '') + (dw === 0 || dw === 6 ? ' wknd' : '');
+        btn.className = 'day' + (k === todayKey ? ' today' : k > todayKey ? ' future' : '') + (dw === 0 || dw === 6 || DAYS_OFF.indexOf(k) > -1 ? ' wknd' : '');
         btn.dataset.key = k;
         btn.dataset.label = MONTHS[m] + ' ' + d + ', ' + y;
         btn.innerHTML = '<span class="star" aria-hidden="true">✦</span><span>' + d + '</span><span class="amt"></span>';
