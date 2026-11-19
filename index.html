@@ -65,7 +65,32 @@
     display: inline-flex; align-items: center; justify-content: center; padding: 0; flex-shrink: 0;
   }
   .total { font-size: 26px; }
-  .sub { font-size: 12px; }
+  .total-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .lb-pill {
+    font-size: 13px; font-weight: 700; padding: 4px 10px; border-radius: 999px; font-variant-numeric: tabular-nums;
+    background: var(--yes-soft); color: var(--yes);
+  }
+  .lb-pill.neg { background: var(--no-soft); color: var(--no); }
+  @media (prefers-color-scheme: dark) { .lb-pill { color: #bbf7d0; } .lb-pill.neg { color: #fecaca; } }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; max-width: 560px; margin: 12px auto 0; }
+  .stat {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 8px 4px 7px;
+    text-align: center; font-variant-numeric: tabular-nums; min-width: 0;
+  }
+  .stat b { display: block; font-size: 20px; line-height: 1.1; }
+  .stat span { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--muted); margin-top: 2px; white-space: nowrap; }
+  .stat .sd { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+  .stat .ss { font-style: normal; color: #facc15; font-size: 11px; line-height: 1; text-shadow: 0 0 1px rgba(0,0,0,.55); }
+  @media (max-width: 360px) { .stat span { font-size: 10px; gap: 3px; } .stats { gap: 6px; } }
+  .settings-row {
+    width: 100%; display: flex; align-items: center; gap: 12px; margin-top: 14px; padding: 14px;
+    background: var(--card); border: 1px solid var(--line); border-radius: 16px; color: var(--text); font: inherit; text-align: left;
+  }
+  .sr-ic { width: 36px; height: 36px; border-radius: 10px; background: var(--empty); color: var(--muted); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .sr-tx { flex: 1; min-width: 0; }
+  .sr-tx b { display: block; font-size: 16px; }
+  .sr-tx small { display: block; font-size: 12px; color: var(--muted); margin-top: 1px; }
+  .sr-chev { color: var(--muted); flex-shrink: 0; }
 
   /* Weight chart: two bars on one shared scale, start at top, goal at bottom */
   .chart {
@@ -246,12 +271,17 @@
   <div class="top">
     <div class="left">
       <div class="total-label">Net deficit</div>
-      <div class="total" id="totalWrap"><span id="total">0</span> <small>cal</small></div>
-      <div class="sub" id="sub">0 deficit days · 0 over</div>
+      <div class="total-row">
+        <div class="total" id="totalWrap"><span id="total">0</span> <small>cal</small></div>
+        <span class="lb-pill" id="lbPill">≈ 0.0 lb</span>
+      </div>
     </div>
-    <button class="icon-btn" id="settingsBtn" aria-label="Settings">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-    </button>
+  </div>
+  <div class="stats">
+    <div class="stat"><b id="stYes">0</b><span><i class="sd" style="background:var(--yes)"></i>Deficit</span></div>
+    <div class="stat"><b id="stOver">0</b><span><i class="sd" style="background:var(--no)"></i>Over</span></div>
+    <div class="stat"><b id="stWo">0</b><span><i class="ss">★</i>Workouts</span></div>
+    <div class="stat"><b id="stStreak">0</b><span><i class="sd" style="background:var(--accent)"></i>Streak</span></div>
   </div>
   <div class="chart">
     <div class="guide start"></div><div class="guide goal"></div>
@@ -288,6 +318,11 @@
     <span><i class="dot" style="background:var(--empty);border:1px solid var(--line)"></i>Not logged</span>
   </div>
   <div id="months"></div>
+  <button type="button" class="settings-row" id="settingsBtn">
+    <span class="sr-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
+    <span class="sr-tx"><b>Settings</b><small>Default calories · start &amp; goal weight · backup</small></span>
+    <svg class="sr-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+  </button>
   <p class="hint">Tap a day to cycle: deficit → over → clear.<br>Press and hold a day to set how much you were under or over.<br>Calories over are subtracted from the total.<br>A day marked over by 0 shows as even (yellow).<br>Hold a day and check “Worked out” to add a ★.<br>Data is saved on this device.</p>
 </main>
 </div>
@@ -523,8 +558,16 @@
     });
     document.getElementById('total').textContent = fmtSigned(total);
     document.getElementById('totalWrap').classList.toggle('neg', total < 0);
-    document.getElementById('sub').textContent =
-      yes + ' deficit day' + (yes === 1 ? '' : 's') + ' · ' + no + ' over · ≈ ' + (total < 0 ? '−' : '') + Math.abs(total / 3500).toFixed(1) + ' lb' + (wo ? ' · ' + wo + ' ★' : '');
+    var over = 0;
+    Object.keys(state.days).forEach(function (k) { var e = state.days[k]; if (e.s === 'no' && rawAmount(e) > 0) over++; });
+    var lb = document.getElementById('lbPill');
+    lb.textContent = '≈ ' + (total < 0 ? '+' : '−') + Math.abs(total / 3500).toFixed(1) + ' lb';
+    lb.classList.toggle('neg', total < 0);
+    lb.title = 'Estimated weight change from your net deficit (3,500 cal ≈ 1 lb)';
+    document.getElementById('stYes').textContent = yes;
+    document.getElementById('stOver').textContent = over;
+    document.getElementById('stWo').textContent = wo;
+    document.getElementById('stStreak').textContent = deficitStreak();
     updateWeight(total);
     monthTotals.forEach(function (mt) {
       var mk = mt.y + '-' + String(mt.m + 1).padStart(2, '0');
@@ -590,6 +633,15 @@
       document.getElementById('daysLeft2').textContent = 'Tap bar';
       document.getElementById('goalDate2').textContent = 'to log weight';
     }
+  }
+
+  // Current run of consecutive deficit days, ending today (or yesterday if today isn't logged yet).
+  function deficitStreak() {
+    var d = todayDate(), n = 0;
+    function isYes(dt) { var e = state.days[key(dt.getFullYear(), dt.getMonth(), dt.getDate())]; return e && e.s === 'yes'; }
+    if (!isYes(d)) d = new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1);
+    while (isYes(d)) { n++; d = new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1); }
+    return n;
   }
 
   // Tap cycles: empty → deficit → over → empty. Custom amounts are reset on each change.
@@ -811,7 +863,7 @@
     var v = state.weights[k];
     var st = document.getElementById('wtStatus');
     if (v != null) {
-      st.textContent = '✓ Logged ' + w1(v) + ' lb today · type a new number to change it';
+      st.textContent = '✓ Logged ' + w1(v) + ' lb today';
       st.className = 'w-status ok';
       wtInput.value = '';
       wtInput.placeholder = w1(v);
